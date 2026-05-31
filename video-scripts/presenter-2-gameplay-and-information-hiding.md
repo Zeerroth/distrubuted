@@ -4,17 +4,26 @@
 (information hiding — Demo Scenario 1), **B4** (detection + Sauron amplifier +
 hidden start), **B8** (analysis pipelines).
 
-On-screen plan: two browsers side by side (Light left @ :8081, Dark right @ :8082)
-+ a terminal. Use the **End Turn ▶** button to advance turns on demand.
+On-screen plan: the Command Map UI in **View = Both** (Light board left, Dark board
+right in one window) + a terminal. Use **End Turn ▶** to advance turns.
+
+> **⚠ Windows / PowerShell.** Run the UI locally: `.\demo.ps1 run` → open
+> **http://localhost:8080/** → View = Both → Connect. Terminal commands below are
+> bash; their **PowerShell** form is shown beside each. The easiest way to drive
+> this whole part is the **Scenarios tab → “Scenario 1 · Information Hiding”**
+> button, which plays the exact sequence automatically while you narrate.
 
 ---
 
 ### [0:00–0:30] Setup recap
 
-> "Thanks. On the left is the **Light Side** browser, on the right the **Dark Side**.
-> Both are plain HTML with Server-Sent-Events — no React, no Vue, as the spec
-> requires. They're connected to two different Go instances, but they see one shared
-> game because all state lives in Kafka. Let's play."
+> "Thanks. This single window shows the **Light Side** on the left and the **Dark
+> Side** on the right. Both are plain HTML with Server-Sent-Events — no React, no
+> Vue, as the spec requires. They see one shared game because all state lives in
+> the engine (and in the cluster, in Kafka). Let's play."
+
+**Tip:** you can click **Scenarios → Scenario 1 · Information Hiding** to auto-play
+the next two sections, or drive it manually as written below.
 
 ### [0:30–1:30] Start a game and move the Ring Bearer — **B10**
 
@@ -36,8 +45,14 @@ On-screen plan: two browsers side by side (Light left @ :8081, Dark right @ :808
 
 **Action (terminal):**
 ```bash
-curl -s "http://localhost:8082/game/state?side=dark" | jq '.units["ring-bearer"].region, .ringBearerRegion'
-curl -s "http://localhost:8081/game/state?side=light" | jq '.units["ring-bearer"].region, .ringBearerRegion'
+# bash:
+curl -s "http://localhost:8080/game/state?side=dark"  | jq '.units["ring-bearer"].region, .ringBearerRegion'
+curl -s "http://localhost:8080/game/state?side=light" | jq '.units["ring-bearer"].region, .ringBearerRegion'
+```
+```powershell
+# Windows PowerShell (no curl/jq):
+(Invoke-RestMethod "http://localhost:8080/game/state?side=dark").ringBearerRegion   # -> "" (gizli)
+(Invoke-RestMethod "http://localhost:8080/game/state?side=light").ringBearerRegion  # -> gerçek bölge
 ```
 > "Dark gets an **empty string** for the Ring Bearer's region; Light gets the real
 > region. Same snapshot, stripped at the delivery edge."
@@ -54,8 +69,25 @@ curl -s "http://localhost:8081/game/state?side=light" | jq '.units["ring-bearer"
 ```bash
 cd option-b && go test -race ./tests -run Router
 ```
+```powershell
+# Windows PowerShell:
+$env:Path += ";C:\Program Files\Go\bin"; cd option-b
+go test -race ./tests -run Router
+```
 > "Green, with the race detector on. The Dark Side **cannot** learn the position
 > through any channel."
+
+> **✅ `-race` works now.** A portable **mingw-w64 gcc** is installed at
+> `%USERPROFILE%\mingw-dist\mingw64\bin` and added to PATH, and Go auto-enables CGO
+> when gcc is present — so `-race` runs (verified: `ok rotr/tests`). Easiest:
+> ```powershell
+> .\demo.ps1 testrace          # full suite under the race detector (B7)
+> ```
+> Note: `-run Router` matches only the two `TestRouter_*` tests; the **concurrent**
+> race test is `TestCache_DarkViewRingBearerAlwaysEmpty`. To run all three
+> information-hiding tests under `-race`, use `-run 'Router|Cache'` or just the full
+> suite. (If you move to a machine without gcc, `.\demo.ps1 test` still passes the
+> logic without `-race`.)
 
 ### [2:45–3:50] Detection — **B4** (the one legitimate reveal)
 
@@ -80,21 +112,26 @@ turn past turn 3.
 `turn <= hiddenUntilTurn` guard.
 > "All config-driven: `EffectiveRange(cfg, sauronActiveInMordor)`. And here's the
 > detection test suite — range-1-at-1-hop true, range-1-at-2-hops false,
-> range-2-at-2-hops true, and the Sauron-amplifier case." *(Show `go test ./tests -run Detection`.)*
+> range-2-at-2-hops true, and the Sauron-amplifier case."
+
+```powershell
+# Windows PowerShell:
+$env:Path += ";C:\Program Files\Go\bin"; cd option-b; go test ./tests -run Detection -v
+```
 
 ### [3:50–4:40] Analysis pipelines — **B8**
 
 > "Each side gets a concurrent analysis pipeline. Light asks 'which route is
 > safest?'"
 
-**Action (Light):** click **Refresh analysis**.
+**Action (Light board):** click the **Analysis** button (top-right of the board).
 > "Pipeline 1 fans the four canonical routes across four goroutine workers and
 > scores each with the spec's risk formula — region threat, surveillance, blocked
 > and threatened paths, and Nazgul proximity — then ranks them. Route 4, the
 > southern corridor, scores higher risk once Saruman corrupts a path, which
 > Presenter C will trigger."
 
-**Action (Dark):** click **Refresh analysis**.
+**Action (Dark board):** click the **Analysis** button.
 > "Dark runs Pipeline 2 — interception. For each Nazgul and each route region it
 > computes an intercept window and a score. Both pipelines use a context with a
 > two-second timeout and return partial results rather than blocking the turn."

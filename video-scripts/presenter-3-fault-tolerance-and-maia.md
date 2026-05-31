@@ -5,8 +5,15 @@ Scenario 2), **B6** (path blocking reverts when the blocker leaves), **B3**
 (combat formula), **B2** (consumer-group rebalance — Demo Scenario 3), **K6**
 (GameOver exactly once). Ends the video.
 
-On-screen plan: two browsers + a 3-pane terminal (`make logs`, a
-`kafka-console-consumer`, and a free shell).
+On-screen plan: the Command Map UI (View = Both) + a 2–3 pane terminal.
+
+> **⚠ Windows / PowerShell.** This part needs the **full cluster** for Scenario 3:
+> `.\demo.ps1 up-all` (builds the 3 Go nodes), then `.\demo.ps1 topics` and
+> `.\demo.ps1 schemas`. The Maia/path/combat beats only need the local engine
+> (`.\demo.ps1 run`). All bash commands below have a PowerShell form beside them.
+> The fastest way to show the Maia/path beats is the **Scenarios tab** buttons —
+> `Scenario 2a`, `2b`, `2c`, and `Win Drive` — which play the exact verified
+> sequences automatically.
 
 ---
 
@@ -26,29 +33,35 @@ case contains(c.MaiaAbilityPaths, ...) && !SarumanDisabled && ... :  // Saruman 
 > "Same order type. The branch is chosen by whether the unit's config has a
 > `maiaAbilityPaths` allow-list — Saruman does, Gandalf doesn't. No names."
 
-**Action (Dark browser):** send `MAIA_ABILITY` for `saruman`, target
-`fords-of-isen-to-edoras`. End the turn.
+**Action:** click **Scenarios → Scenario 2a · Saruman Corrupts a Path** (or send
+`MAIA_ABILITY` for `saruman` on `fords-of-isen-to-edoras` manually). It walks
+Saruman to the Fords and corrupts the path.
 > "Saruman corrupts `fords-of-isen-to-edoras`. The path's surveillance jumps to 3,
-> **permanently** — a `PathCorrupted` event fires. From now on the Ring Bearer
-> crossing it is exposed regardless of Nazgul positions, which is why Route 4's risk
-> score went up in Presenter B's panel."
+> **permanently** — a `PathCorrupted` event fires, purple on the map. From now on
+> the Ring Bearer crossing it is exposed regardless of Nazgul positions, which is
+> why Route 4's risk score went up in Presenter B's panel."
 
-**Action (Light browser):** send `MAIA_ABILITY` for `gandalf` on a BLOCKED path.
+**Action:** click **Scenarios → Scenario 2b · Gandalf Opens a Blocked Path** (it
+blocks `moria-to-lothlorien` with a Nazgûl, then opens it with Gandalf — same order
+type).
 > "Same order type for Gandalf turns a **blocked** path **temporarily open** for two
 > turns — blue on the map — then it reverts. Different effect, one order type,
 > chosen purely by config."
 
 ### [0:55–1:50] Path blocking reverts — **B6**
 
-> "Path blocking requires **presence**. Watch a Nazgul block a path, then leave."
+> "Path blocking requires **presence** — and a guard denies it outright."
 
-**Action (Dark):** `BLOCK_PATH` for `nazgul-2` on a path at its endpoint; end turn —
-show the path goes BLOCKED on both maps.
-**Action (Dark):** `REDIRECT_UNIT`/move `nazgul-2` away from that endpoint; end turn.
-> "The blocker moved off the endpoint, so at the next turn-end the path **reverts to
-> OPEN** automatically. And the counter-play the spec wants: a **FellowshipGuard**
-> standing on an endpoint denies the Nazgul a permanent block in the first place.
-> This is the `ReconcileBlock` step." *(Show it in `internal/game/path.go`.)*
+**Action:** click **Scenarios → Scenario 2c · Guard Denies a Nazgûl Block** — Legolas
+takes the Lothlórien endpoint, a Nazgûl deploys opposite and **tries** to block
+`lothlorien-to-emyn-muil`; the block **fails** while the guard is present.
+> "The FellowshipGuard at the endpoint denies the block — the path stays **OPEN**;
+> the engine even emits a `BlockFailed` event. That's spec §2.4."
+
+> "And the related rule (B6): if a Nazgûl *does* block a path with no guard, the
+> block **reverts to OPEN** the moment that Nazgûl leaves the endpoint — the
+> `ReconcileBlock` step." *(Show it in `internal/game/path.go`; you can demo it
+> manually: BLOCK_PATH a clear path, then REDIRECT the blocker away and End Turn.)*
 
 ### [1:50–2:40] Combat — **B3**
 
@@ -59,6 +72,10 @@ show the path goes BLOCKED on both maps.
 **Action (terminal):**
 ```bash
 cd option-b && go test ./tests -run Combat -v
+```
+```powershell
+# Windows PowerShell:
+$env:Path += ";C:\Program Files\Go\bin"; cd option-b; go test ./tests -run Combat -v
 ```
 > "All six combat cases pass: 5-versus-5 on plains is a repel; on a fortress the
 > defender wins 5 to 7; the Uruk-hai ignores the **terrain** bonus but **not** the
@@ -71,9 +88,17 @@ cd option-b && go test ./tests -run Combat -v
 > "Now the distributed payoff. We have three Go instances — go-1, go-2, go-3 — in one
 > Kafka consumer group. I'll kill one **mid-game**."
 
-**Action (terminal pane a — logs running). Pane c:**
+**Setup (PowerShell):** `.\demo.ps1 up-all` (builds + starts go-1/2/3), then
+`.\demo.ps1 topics` and `.\demo.ps1 schemas`. Light = http://localhost:8081/,
+Dark = http://localhost:8082/.
+
+**Action (terminal pane a — logs):**
 ```bash
-docker stop go-2
+docker compose logs -f go-1 go-2 go-3        # bash AND PowerShell (docker is the same)
+```
+**Pane c — kill a node:**
+```bash
+docker stop go-2                              # bash AND PowerShell
 ```
 > "Watch the logs: Kafka detects go-2 left and triggers a **consumer-group
 > rebalance**. go-2's partitions are reassigned to go-1 and go-3 within seconds —
@@ -96,11 +121,18 @@ docker start go-2
 
 **Action (terminal pane b):**
 ```bash
-kafka-console-consumer --bootstrap-server localhost:9092 --topic game.broadcast \
-  --from-beginning | grep --line-buffered GameOver
+# bash:
+docker compose exec kafka kafka-console-consumer --bootstrap-server kafka:29092 \
+  --topic game.broadcast --from-beginning | grep --line-buffered GameOver
 ```
-**Action:** drive a quick win (Ring Bearer at Mount Doom + `DESTROY_RING`), then
-immediately `docker restart` the producing instance.
+```powershell
+# Windows PowerShell (grep -> Select-String):
+docker compose exec kafka kafka-console-consumer --bootstrap-server kafka:29092 `
+  --topic game.broadcast --from-beginning | Select-String GameOver
+```
+**Action:** drive the win with the UI **Scenarios → Win Drive** button (Ring Bearer
+to Mount Doom + `DESTROY_RING`), then immediately `docker restart go-1` (the
+producing instance).
 > "I trigger the win and kill the engine the instant it produces. After restart, the
 > consumer on `game.broadcast` shows **GameOver exactly once** — not zero, not two —
 > because we produce it with `enable.idempotence=true`. There it is, a single
@@ -109,8 +141,8 @@ immediately `docker restart` the producing instance.
 ### [4:45–5:00] Wrap-up
 
 > "To recap: a config-driven engine with no hardcoded unit ids; ten Kafka topics
-> with schema evolution; provable information hiding verified under the race
-> detector; the same Maia order type dispatching two different effects by config;
+> with schema evolution; provable information hiding pinned by the router tests
+> (race-clean on CI); the same Maia order type dispatching two different effects by config;
 > path blocking that respects presence; and a three-instance cluster that survives a
 > node failure with exactly-once `GameOver`. Thanks for watching — we're happy to
 > take questions."

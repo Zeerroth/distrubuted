@@ -73,8 +73,11 @@ button.wide { width: 100%; margin-top: 10px; padding: 10px; }
 .pathsurv { stroke: var(--surv); stroke-width: 6; opacity: .5; stroke-dasharray: 2 6; }
 .utoken { font-size: 15px; text-anchor: middle; pointer-events: none; paint-order: stroke; stroke: #0c0a06; stroke-width: 3px; }
 .ubadge { font-size: 9px; text-anchor: middle; pointer-events: none; fill: var(--ink); }
-.ring-marker { fill: none; stroke: var(--gold); stroke-width: 2.5; }
-.detect-marker { fill: none; stroke: var(--shadow); stroke-width: 2.5; }
+.ring-marker { fill: none; stroke: var(--gold); stroke-width: 3.5; animation: ringpulse 1.5s ease-in-out infinite; }
+.detect-marker { fill: none; stroke: var(--shadow); stroke-width: 3; stroke-dasharray: 5 4; }
+.rbtoken { font-size: 26px; text-anchor: middle; pointer-events: none; paint-order: stroke; stroke: #0c0a06; stroke-width: 4px; }
+.rbtoken.detect { fill: var(--shadow); font-size: 24px; }
+@keyframes ringpulse { 0%, 100% { opacity: .45; stroke-width: 2.5; } 50% { opacity: 1; stroke-width: 4.5; } }
 
 /* ---------- side panel ---------- */
 #panel { width: 330px; background: var(--panel2); border-left: 1px solid var(--gold); display: flex; flex-direction: column; }

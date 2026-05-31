@@ -197,12 +197,19 @@ function renderSVG(snap, side) {
     if ((st.surveillanceLevel || 0) > 0 || st.corrupted)
       surv += `<line class="pathsurv" x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}"/>`;
   }
-  // ring / detection markers
+  // Ring Bearer marker.
+  //  LIGHT sees the REAL location (pulsing gold ring + 💍 token).
+  //  DARK sees ONLY the last region detection revealed (red ✦), and nothing at all
+  //  before the first detection — never the live position.
   if (side === "light" && snap.ringBearerRegion) {
-    const c = xy(snap.ringBearerRegion); nodes += `<circle class="ring-marker" cx="${c[0]}" cy="${c[1]}" r="30"/>`;
+    const c = xy(snap.ringBearerRegion);
+    nodes += `<circle class="ring-marker" cx="${c[0]}" cy="${c[1]}" r="30"/>`;
+    tokens += `<text class="rbtoken" x="${c[0]}" y="${c[1] - 22}">💍</text>`;
   }
   if (side === "dark" && snap.ringLastDetectedRegion) {
-    const c = xy(snap.ringLastDetectedRegion); nodes += `<circle class="detect-marker" cx="${c[0]}" cy="${c[1]}" r="30"/><text class="rterr" x="${c[0]}" y="${c[1] - 34}">✦</text>`;
+    const c = xy(snap.ringLastDetectedRegion);
+    nodes += `<circle class="detect-marker" cx="${c[0]}" cy="${c[1]}" r="30"/>`;
+    tokens += `<text class="rbtoken detect" x="${c[0]}" y="${c[1] - 22}">✦</text>`;
   }
   // regions
   for (const r of Object.values(App.regions)) {

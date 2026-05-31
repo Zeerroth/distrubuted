@@ -7,6 +7,7 @@
   Commands that need NO Docker (local engine only):
       check     show there are NO unit-id literals in game logic (A2/B1)
       test      run all Go unit tests (25/25)
+      testrace  run all tests WITH the race detector (B7; needs gcc on PATH)
       run       start the engine + UI locally at http://localhost:8080
       verify    drive the live engine and assert all demo scenarios (15/15)
 
@@ -26,7 +27,12 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
 $SR = "http://localhost:8085"
-function GoPath { if (-not ($env:Path -like "*Go\bin*")) { $env:Path += ";C:\Program Files\Go\bin" } }
+function GoPath {
+  if (-not ($env:Path -like "*Go\bin*")) { $env:Path += ";C:\Program Files\Go\bin" }
+  # add portable mingw gcc (for -race / cgo) if present and not already on PATH
+  $gcc = "$env:USERPROFILE\mingw-dist\mingw64\bin"
+  if ((Test-Path "$gcc\gcc.exe") -and ($env:Path -notlike "*mingw-dist*")) { $env:Path += ";$gcc" }
+}
 
 # Register one Avro schema. Reads with ReadAllText (strips BOM), wraps the schema
 # as a JSON STRING, and POSTs as UTF-8 bytes so the "§" chars in doc fields don't
@@ -49,6 +55,15 @@ switch ($cmd) {
   }
 
   "test" { GoPath; Push-Location option-b; go test ./...; Pop-Location }
+
+  "testrace" {
+    GoPath
+    if (-not (Get-Command gcc -ErrorAction SilentlyContinue)) {
+      Write-Host "gcc PATH'te degil -> -race calismaz. mingw-w64 kur (README) ya da '.\demo.ps1 test' kullan." -ForegroundColor Yellow
+      break
+    }
+    Push-Location option-b; go test -race ./...; Pop-Location
+  }
 
   "run" {
     GoPath; Push-Location option-b
