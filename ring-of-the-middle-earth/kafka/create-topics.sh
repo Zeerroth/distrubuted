@@ -13,11 +13,11 @@ REPL="${REPL:-1}"
 
 create() { # name partitions cleanup retention_ms
   local name="$1" parts="$2" cleanup="$3" retention="$4"
-  local cfg="cleanup.policy=${cleanup}"
-  if [ "$retention" != "-" ]; then cfg="${cfg},retention.ms=${retention}"; fi
+  # one --config flag per setting (kafka-topics rejects "a=b,c=d" in a single flag)
+  local cfgs=(--config "cleanup.policy=${cleanup}")
+  if [ "$retention" != "-" ]; then cfgs+=(--config "retention.ms=${retention}"); fi
   kafka-topics --bootstrap-server "$BROKER" --create --if-not-exists \
-    --topic "$name" --partitions "$parts" --replication-factor "$REPL" \
-    --config "$cfg"
+    --topic "$name" --partitions "$parts" --replication-factor "$REPL" "${cfgs[@]}"
   echo "created $name (partitions=$parts cleanup=$cleanup retention=$retention)"
 }
 

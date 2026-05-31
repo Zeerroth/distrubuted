@@ -28,6 +28,17 @@ Set-Location $root
 $SR = "http://localhost:8085"
 function GoPath { if (-not ($env:Path -like "*Go\bin*")) { $env:Path += ";C:\Program Files\Go\bin" } }
 
+# Register one Avro schema. Reads with ReadAllText (strips BOM), wraps the schema
+# as a JSON STRING, and POSTs as UTF-8 bytes so the "§" chars in doc fields don't
+# break Invoke-RestMethod's default encoding.
+function Register-Schema($subject, $file) {
+  $s = [System.IO.File]::ReadAllText((Join-Path $root "kafka\schemas\$file"))
+  $body = '{"schema":' + ($s | ConvertTo-Json) + '}'
+  $bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+  Invoke-RestMethod -Method Post -ContentType "application/vnd.schemaregistry.v1+json" `
+    -Uri "$SR/subjects/$subject/versions" -Body $bytes
+}
+
 switch ($cmd) {
 
   "check" {
@@ -63,7 +74,29 @@ switch ($cmd) {
   }
 
   "topics" {
-    Get-Content -Raw .\kafka\create-topics.sh | docker compose exec -T -e BROKER=kafka:29092 -e REPL=1 kafka bash -s
+    # Create all 10 topics natively (avoids piping the .sh through container bash,
+    # which broke on the BOM/CRLF; also uses one --config flag per setting).
+    $T = @(
+      @("game.orders.raw", 3, "delete", 3600000),
+      @("game.orders.validated", 6, "delete", 3600000),
+      @("game.events.unit", 6, "delete", 604800000),
+      @("game.events.region", 6, "delete", 604800000),
+      @("game.events.path", 6, "delete", 604800000),
+      @("game.session", 1, "compact", $null),
+      @("game.broadcast", 1, "delete", 3600000),
+      @("game.ring.position", 1, "delete", 3600000),
+      @("game.ring.detection", 2, "delete", 3600000),
+      @("game.dlq", 3, "delete", 604800000)
+    )
+    foreach ($t in $T) {
+      $dargs = @("compose", "exec", "-T", "kafka", "kafka-topics", "--bootstrap-server", "kafka:29092",
+        "--create", "--if-not-exists", "--topic", $t[0], "--partitions", "$($t[1])",
+        "--replication-factor", "1", "--config", "cleanup.policy=$($t[2])")
+      if ($t[3]) { $dargs += @("--config", "retention.ms=$($t[3])") }
+      & docker $dargs | Out-Null
+      Write-Host "  created $($t[0])  (partitions=$($t[1]) cleanup=$($t[2]))" -ForegroundColor Green
+    }
+    Write-Host "all 10 topics created" -ForegroundColor Green
   }
 
   "describe" {
@@ -87,10 +120,7 @@ switch ($cmd) {
       "rotr.events.RingBearerSpotted" = "ring-bearer-spotted.avsc"
     }
     foreach ($subject in $map.Keys) {
-      $schema = Get-Content -Raw ".\kafka\schemas\$($map[$subject])"
-      $payload = @{ schema = $schema } | ConvertTo-Json -Compress
-      Invoke-RestMethod -Method Post -ContentType "application/vnd.schemaregistry.v1+json" `
-        -Uri "$SR/subjects/$subject/versions" -Body $payload | Out-Null
+      Register-Schema $subject $map[$subject] | Out-Null
       Write-Host "  registered $subject" -ForegroundColor Green
     }
   }
@@ -98,12 +128,10 @@ switch ($cmd) {
   "subjects" { Invoke-RestMethod "$SR/subjects" | ConvertTo-Json }
 
   "evolve" {
-    $schema = Get-Content -Raw .\kafka\schemas\order-validated-v2.avsc
-    $payload = @{ schema = $schema } | ConvertTo-Json -Compress
     Write-Host "Registering OrderValidated V2 (adds nullable routeRiskScore)..." -ForegroundColor Cyan
-    Invoke-RestMethod -Method Post -ContentType "application/vnd.schemaregistry.v1+json" `
-      -Uri "$SR/subjects/game.orders.validated-value/versions" -Body $payload
-    Write-Host "Versions now present:" -ForegroundColor Green
+    $r = Register-Schema "game.orders.validated-value" "order-validated-v2.avsc"
+    Write-Host ("  registered (id=" + $r.id + ")") -ForegroundColor Green
+    Write-Host "Versions now present for game.orders.validated-value:" -ForegroundColor Green
     Invoke-RestMethod "$SR/subjects/game.orders.validated-value/versions"
   }
 
