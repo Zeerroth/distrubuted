@@ -1,0 +1,11 @@
+{
+  "type": "record",
+  "name": "RingBearerMoved",
+  "namespace": "rotr.events",
+  "doc": "Carries the TRUE region. Topic game.ring.position, Light Side ONLY (spec §9/§10).",
+  "fields": [
+    { "name": "trueRegion", "type": "string" },
+    { "name": "turn", "type": "int" },
+    { "name": "timestamp", "type": "long" }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "type": "record",
+  "name": "PathStatusChanged",
+  "namespace": "rotr.events",
+  "doc": "Emitted to game.events.path on any path transition (spec §10/§19).",
+  "fields": [
+    { "name": "pathId", "type": "string" },
+    { "name": "newStatus", "type": { "type": "enum", "name": "PathStatus", "symbols": ["OPEN", "THREATENED", "BLOCKED", "TEMPORARILY_OPEN"] } },
+    { "name": "surveillanceLevel", "type": "int" },
+    { "name": "tempOpenTurns", "type": "int" },
+    { "name": "turn", "type": "int" },
+    { "name": "timestamp", "type": "long" }
+  ]
+}

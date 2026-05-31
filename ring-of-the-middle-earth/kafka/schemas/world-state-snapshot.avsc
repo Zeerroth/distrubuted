@@ -1,0 +1,24 @@
+{
+  "type": "record",
+  "name": "WorldStateSnapshot",
+  "namespace": "rotr.events",
+  "doc": "Full public world state on game.broadcast. RB region is stripped before delivery to the Dark Side (spec §9/§30).",
+  "fields": [
+    { "name": "turn", "type": "int" },
+    { "name": "regions", "type": { "type": "array", "items": {
+        "type": "record", "name": "RegionSnap", "fields": [
+          { "name": "id", "type": "string" },
+          { "name": "controlledBy", "type": "string" },
+          { "name": "threatLevel", "type": "int" },
+          { "name": "fortified", "type": "boolean" }
+        ] } } },
+    { "name": "units", "type": { "type": "array", "items": {
+        "type": "record", "name": "UnitSnap", "fields": [
+          { "name": "id", "type": "string" },
+          { "name": "region", "type": "string" },
+          { "name": "strength", "type": "int" },
+          { "name": "status", "type": "string" }
+        ] } } },
+    { "name": "timestamp", "type": "long" }
+  ]
+}

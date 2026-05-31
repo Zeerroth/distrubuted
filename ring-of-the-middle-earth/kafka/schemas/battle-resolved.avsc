@@ -1,0 +1,12 @@
+{
+  "type": "record",
+  "name": "BattleResolved",
+  "namespace": "rotr.events",
+  "doc": "Emitted to game.events.region after combat (spec §10/§8).",
+  "fields": [
+    { "name": "regionId", "type": "string" },
+    { "name": "attackerWon", "type": "boolean" },
+    { "name": "turn", "type": "int" },
+    { "name": "timestamp", "type": "long" }
+  ]
+}

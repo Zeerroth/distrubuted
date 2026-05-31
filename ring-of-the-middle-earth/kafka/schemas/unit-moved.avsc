@@ -1,0 +1,13 @@
+{
+  "type": "record",
+  "name": "UnitMoved",
+  "namespace": "rotr.events",
+  "doc": "Emitted to game.events.unit when a non-bearer unit advances (spec §10).",
+  "fields": [
+    { "name": "unitId", "type": "string" },
+    { "name": "from", "type": "string" },
+    { "name": "to", "type": "string" },
+    { "name": "turn", "type": "int" },
+    { "name": "timestamp", "type": "long" }
+  ]
+}

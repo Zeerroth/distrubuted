@@ -1,0 +1,14 @@
+{
+  "type": "record",
+  "name": "OrderValidated",
+  "namespace": "rotr.events",
+  "doc": "V1: a validated order on game.orders.validated (spec §10).",
+  "fields": [
+    { "name": "playerId", "type": "string" },
+    { "name": "unitId", "type": "string" },
+    { "name": "orderType", "type": "string" },
+    { "name": "payload", "type": "bytes" },
+    { "name": "turn", "type": "int" },
+    { "name": "timestamp", "type": "long" }
+  ]
+}

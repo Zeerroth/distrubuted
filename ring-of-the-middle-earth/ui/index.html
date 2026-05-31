@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ring of the Middle Earth — Command Map</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ============ TOP BAR ============ -->
+  <header id="topbar">
+    <div class="brand">
+      <span class="ring">⟡</span>
+      <div>
+        <h1>Ring of the Middle Earth</h1>
+        <div class="sub">Distributed engine · Option B (Go + Kafka) · live command map</div>
+      </div>
+    </div>
+
+    <div class="topctl">
+      <label class="fld">Engine
+        <input id="engineUrl" value="" size="20" title="Engine URL used for orders / tick / reset" />
+      </label>
+      <label class="fld">View
+        <select id="viewMode">
+          <option value="both">Both (Light | Dark)</option>
+          <option value="light">Light only</option>
+          <option value="dark">Dark only</option>
+        </select>
+      </label>
+      <button id="btnConnect" class="primary">Connect</button>
+      <div class="spacer"></div>
+      <div class="hud">
+        <span class="hudpill" id="hudTurn">Turn —</span>
+        <span class="hudpill" id="hudPhase">hidden start</span>
+        <span class="hudpill" id="hudConn">offline</span>
+      </div>
+      <button id="btnTick" class="go">End Turn ▶</button>
+      <button id="btnReset" class="warn">Reset ↺</button>
+    </div>
+    <div id="gameover" class="gameover hidden"></div>
+  </header>
+
+  <div id="app">
+    <!-- ============ BOARDS ============ -->
+    <section id="boards">
+      <!-- board templates filled by JS -->
+    </section>
+
+    <!-- ============ SIDE PANEL ============ -->
+    <aside id="panel">
+      <nav class="tabs">
+        <button class="tab active" data-tab="scenarios">Scenarios</button>
+        <button class="tab" data-tab="order">Order</button>
+        <button class="tab" data-tab="help">Legend</button>
+      </nav>
+
+      <!-- SCENARIOS -->
+      <div class="tabpane active" id="tab-scenarios">
+        <p class="hint">One click sets up and plays a demo scenario. Watch both boards.</p>
+        <button class="scn" data-scn="s1">▶ Scenario 1 · Information Hiding</button>
+        <button class="scn" data-scn="s2a">▶ Scenario 2a · Saruman Corrupts a Path</button>
+        <button class="scn" data-scn="s2b">▶ Scenario 2b · Gandalf Opens a Blocked Path</button>
+        <button class="scn" data-scn="s2c">▶ Scenario 2c · Guard Denies a Nazgûl Block</button>
+        <button class="scn" data-scn="win">▶ Win Drive · Destroy the Ring</button>
+        <div class="scn-note" id="scnStatus">Idle.</div>
+        <details class="s3">
+          <summary>Scenario 3 · Fault tolerance (terminal)</summary>
+          <p>Run the 3-instance stack, then in a terminal:</p>
+          <pre>docker stop go-2     # watch the consumer-group rebalance
+docker start go-2    # it rebuilds KTable state from Kafka</pre>
+          <p>Use “Win Drive”, then restart the engine immediately and confirm
+          <code>GameOver</code> appears exactly once on <code>game.broadcast</code>.</p>
+        </details>
+      </div>
+
+      <!-- ORDER BUILDER -->
+      <div class="tabpane" id="tab-order">
+        <div class="row">
+          <label class="fld">Side
+            <select id="ordSide"><option value="light">Light</option><option value="dark">Dark</option></select>
+          </label>
+          <label class="fld">Unit
+            <select id="ordUnit"></select>
+          </label>
+        </div>
+        <label class="fld">Order
+          <select id="ordType"></select>
+        </label>
+
+        <div id="ordInputs"></div>
+
+        <div class="routebuild hidden" id="routeBuild">
+          <div class="rb-head">Route builder — click regions on the map in order:</div>
+          <div class="rb-list" id="rbList">(no regions yet)</div>
+          <div class="rb-actions">
+            <button id="rbClear" class="mini">Clear</button>
+            <span class="rb-paths" id="rbPaths"></span>
+          </div>
+          <div class="rb-quick">
+            Quick routes:
+            <button class="mini" data-route="route1">Fellowship</button>
+            <button class="mini" data-route="route2">N. Bypass</button>
+            <button class="mini" data-route="route3">Dark Route</button>
+            <button class="mini" data-route="route4">S. Corridor</button>
+          </div>
+        </div>
+
+        <button id="ordSubmit" class="primary wide">Submit Order</button>
+        <div class="ord-result" id="ordResult"></div>
+      </div>
+
+      <!-- LEGEND -->
+      <div class="tabpane" id="tab-help">
+        <h3>Regions (control)</h3>
+        <ul class="legend">
+          <li><i class="sw free"></i> Free Peoples</li>
+          <li><i class="sw shadow"></i> Shadow</li>
+          <li><i class="sw neutral"></i> Neutral</li>
+        </ul>
+        <h3>Paths (status)</h3>
+        <ul class="legend">
+          <li><i class="ln open"></i> Open</li>
+          <li><i class="ln threat"></i> Threatened</li>
+          <li><i class="ln blocked"></i> Blocked</li>
+          <li><i class="ln temp"></i> Temporarily open (Gandalf)</li>
+          <li><i class="ln surv"></i> Surveilled / corrupted (Saruman)</li>
+        </ul>
+        <h3>Units</h3>
+        <ul class="legend">
+          <li>💍 Ring Bearer (Light only)</li>
+          <li>⚔ Fellowship Guard &nbsp; 🛡 Gondor Army</li>
+          <li>🧙 Maia &nbsp; 👁 Nazgûl &nbsp; 🪓 Uruk-hai</li>
+        </ul>
+        <p class="hint">On the <b>Dark</b> board the Ring Bearer is never drawn; a ✦
+        marks the last region where detection revealed it.</p>
+      </div>
+    </aside>
+  </div>
+
+  <template id="boardTpl">
+    <div class="board">
+      <div class="board-head">
+        <span class="side-badge"></span>
+        <span class="board-rb"></span>
+        <span class="board-conn"></span>
+        <button class="mini board-analyze">Analysis</button>
+      </div>
+      <div class="board-map"></div>
+      <div class="board-foot">
+        <div class="board-analysis"></div>
+        <div class="board-log"></div>
+      </div>
+    </div>
+  </template>
+
+  <script src="game.js"></script>
+</body>
+</html>

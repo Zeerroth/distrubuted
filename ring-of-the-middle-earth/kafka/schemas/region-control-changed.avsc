@@ -1,0 +1,12 @@
+{
+  "type": "record",
+  "name": "RegionControlChanged",
+  "namespace": "rotr.events",
+  "doc": "Emitted to game.events.region when control of a region flips (spec §10).",
+  "fields": [
+    { "name": "regionId", "type": "string" },
+    { "name": "newController", "type": "string" },
+    { "name": "turn", "type": "int" },
+    { "name": "timestamp", "type": "long" }
+  ]
+}

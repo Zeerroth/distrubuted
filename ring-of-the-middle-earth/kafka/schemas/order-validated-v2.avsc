@@ -1,0 +1,15 @@
+{
+  "type": "record",
+  "name": "OrderValidated",
+  "namespace": "rotr.events",
+  "doc": "V2: adds nullable routeRiskScore (spec §10 schema-evolution requirement). BACKWARD-compatible: the new field has a default of null, so V1 consumers keep working while V2 is deployed (demo K3).",
+  "fields": [
+    { "name": "playerId", "type": "string" },
+    { "name": "unitId", "type": "string" },
+    { "name": "orderType", "type": "string" },
+    { "name": "payload", "type": "bytes" },
+    { "name": "turn", "type": "int" },
+    { "name": "timestamp", "type": "long" },
+    { "name": "routeRiskScore", "type": ["null", "int"], "default": null }
+  ]
+}

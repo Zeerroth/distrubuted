@@ -1,0 +1,11 @@
+{
+  "type": "record",
+  "name": "RingBearerSpotted",
+  "namespace": "rotr.events",
+  "doc": "Topic game.ring.detection, Dark Side ONLY. Fired when the bearer crosses a surveilled path (spec §6 step 7).",
+  "fields": [
+    { "name": "pathId", "type": "string" },
+    { "name": "turn", "type": "int" },
+    { "name": "timestamp", "type": "long" }
+  ]
+}
